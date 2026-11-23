@@ -310,14 +310,17 @@
         </div>
 
         <!-- CONTROLES EN LA PUERTA PRINCIPAL -->
-        <div id="doorControls" class="hidden pointer-events-auto absolute bottom-5 left-1/2 -translate-x-1/2 flex flex-wrap items-center justify-center gap-2.5 w-11/12 max-w-xl">
-            <button id="btnToggleLock" class="hotspot-btn flex-1 bg-amber-950/90 hover:bg-amber-900 text-amber-100 border border-amber-500/60 px-3 py-3 rounded-xl font-bold text-xs sm:text-sm shadow-2xl cursor-pointer">
+        <div id="doorControls" class="hidden pointer-events-auto absolute bottom-5 left-1/2 -translate-x-1/2 flex flex-wrap items-center justify-center gap-2 w-11/12 max-w-2xl">
+            <button id="btnToggleLock" class="hotspot-btn flex-1 min-w-[120px] bg-amber-950/90 hover:bg-amber-900 text-amber-100 border border-amber-500/60 px-3 py-3 rounded-xl font-bold text-xs sm:text-sm shadow-2xl cursor-pointer">
                 🔑 Quitar / Poner Llave
             </button>
-            <button id="btnPeekDoor" class="hotspot-btn flex-1 bg-zinc-900/95 hover:bg-zinc-800 text-zinc-100 border border-zinc-500/60 px-3 py-3 rounded-xl font-bold text-xs sm:text-sm shadow-2xl cursor-pointer">
+            <button id="btnPeekDoor" class="hotspot-btn flex-1 min-w-[120px] bg-zinc-900/95 hover:bg-zinc-800 text-zinc-100 border border-zinc-500/60 px-3 py-3 rounded-xl font-bold text-xs sm:text-sm shadow-2xl cursor-pointer">
                 👁️ Entreabrir Puerta
             </button>
-            <button id="btnLeaveDoor" class="hotspot-btn flex-1 bg-red-950/90 hover:bg-red-900 text-white border border-red-500/60 px-3 py-3 rounded-xl font-bold text-xs sm:text-sm shadow-2xl cursor-pointer">
+            <button id="btnFlashlight" class="hotspot-btn flex-1 min-w-[120px] bg-yellow-950/90 hover:bg-yellow-900 text-yellow-100 border border-yellow-500/60 px-3 py-3 rounded-xl font-bold text-xs sm:text-sm shadow-2xl cursor-pointer">
+                🔦 Alumbrar Pasillo
+            </button>
+            <button id="btnLeaveDoor" class="hotspot-btn flex-1 min-w-[120px] bg-red-950/90 hover:bg-red-900 text-white border border-red-500/60 px-3 py-3 rounded-xl font-bold text-xs sm:text-sm shadow-2xl cursor-pointer">
                 ⬅ VOLVER A LA CAMA
             </button>
         </div>
@@ -344,8 +347,8 @@
 
             <ul class="space-y-3 font-mono-retro text-xs sm:text-sm text-stone-900 leading-snug">
                 <li class="bg-stone-900/10 p-2.5 rounded-lg border-l-4 border-red-800">
-                    <strong class="text-red-950 block mb-0.5">REGLA 1 (LA RESPIRACIÓN):</strong>
-                    Si lo escuchas <span class="underline font-bold">respirar afuera</span>, usa el control remoto para prender la TV en el canal de estática, lo hará tranquilizarse. (Apágala cuando pare).
+                    <strong class="text-red-950 block mb-0.5">REGLA 1 (LA RESPIRACIÓN Y LA TV):</strong>
+                    Si lo escuchas <span class="underline font-bold">respirar afuera</span>, usa el control remoto para prender la TV en el canal de estática. <span class="font-bold text-red-950">¡Cuidado! La señal falla a veces: si ves barras oscuras y zumbidos (mala señal), no lo calmará. Apaga y vuelve a prender la TV hasta agarrar estática limpia.</span>
                 </li>
                 <li class="bg-stone-900/10 p-2.5 rounded-lg border-l-4 border-red-800">
                     <strong class="text-red-950 block mb-0.5">REGLA 2 (LA COSA EN LA VENTANA Y LA LUZ):</strong>
@@ -356,8 +359,10 @@
                     Las cortinas están cerradas desde tu cama. Acércate a la ventana cada cierto tiempo para apartarlas y vigilar el bosque. Si ves al <span class="font-bold">ser alto y delgado con la cabeza moviéndose erráticamente</span> (aunque su cuerpo no), míralo fijamente hasta que retroceda.
                 </li>
                 <li class="bg-stone-900/10 p-2.5 rounded-lg border-l-4 border-red-800">
-                    <strong class="text-red-950 block mb-0.5">REGLA 4 (LA PUERTA PRINCIPAL):</strong>
-                    La puerta de enfrente tiene llave, pero algo intentará forzarla y entrar a revisar el cuarto. Si escuchas golpes en la puerta o ves que se abre, <span class="underline font-bold">métete debajo de la cama</span> y quédate quieto hasta que salga.
+                    <strong class="text-red-950 block mb-0.5">REGLA 4 (LA PUERTA PRINCIPAL Y LA LINTERNA):</strong>
+                    Si escuchas pasos acercarse a la puerta, ve hacia ella y entreábrela para escuchar, <span class="underline font-bold text-red-950">pero NUNCA alumbres con la linterna si hay algo ahí o te matará al instante</span> (solo úsala para confirmar si fue una falsa alarma).
+                    <br>• <span class="font-bold">Si escuchas GRITOS distorsionados:</span> deja la puerta <span class="underline">sin llave</span>, corre y métete <span class="underline font-bold">debajo de la cama</span> hasta que entre, revise el cuarto y se vaya.
+                    <br>• <span class="font-bold">Si escuchas RISAS macabras:</span> cierra la puerta y <span class="underline font-bold">ponle llave rápido</span>; golpeará con furia unos segundos antes de irse.
                 </li>
             </ul>
 
@@ -425,6 +430,8 @@
                 this.ctx = null;
                 this.staticNode = null;
                 this.staticGain = null;
+                this.badSignalOsc = null;
+                this.badSignalLfo = null;
                 this.breathInterval = null;
                 this.heartbeatInterval = null;
                 this.alarmInterval = null;
@@ -432,38 +439,36 @@
 
             init() {
                 if (!this.ctx) {
-                    const AudioContext = window.AudioContext || window.webkitAudioContext;
-                    this.ctx = new AudioContext();
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioCtx();
                 }
                 if (this.ctx.state === 'suspended') {
                     this.ctx.resume();
                 }
             }
 
-            // Alarma de emergencia del teléfono en la intro
+            // Alarma de emergencia del teléfono en la introducción
             startPhoneAlarm() {
                 this.init();
                 this.stopPhoneAlarm();
-                const playPulse = () => {
+                const beep = () => {
                     if (!this.ctx) return;
                     const now = this.ctx.currentTime;
-                    const osc = this.ctx.createOscillator();
-                    const gain = this.ctx.createGain();
-                    osc.type = 'sawtooth';
-                    osc.frequency.setValueAtTime(880, now);
-                    osc.frequency.setValueAtTime(660, now + 0.15);
-                    osc.frequency.setValueAtTime(880, now + 0.3);
-
-                    gain.gain.setValueAtTime(0.18, now);
-                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
-
-                    osc.connect(gain);
-                    gain.connect(this.ctx.destination);
-                    osc.start(now);
-                    osc.stop(now + 0.45);
+                    [880, 987.77].forEach((freq, idx) => {
+                        const osc = this.ctx.createOscillator();
+                        const gain = this.ctx.createGain();
+                        osc.type = 'square';
+                        osc.frequency.setValueAtTime(freq, now + idx * 0.14);
+                        gain.gain.setValueAtTime(0.12, now + idx * 0.14);
+                        gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.14 + 0.12);
+                        osc.connect(gain);
+                        gain.connect(this.ctx.destination);
+                        osc.start(now + idx * 0.14);
+                        osc.stop(now + idx * 0.14 + 0.13);
+                    });
                 };
-                playPulse();
-                this.alarmInterval = setInterval(playPulse, 700);
+                beep();
+                this.alarmInterval = setInterval(beep, 650);
             }
 
             stopPhoneAlarm() {
@@ -473,24 +478,24 @@
                 }
             }
 
-            // Sonido de teléfono muriendo por batería baja
+            // Sonido cuando el teléfono se queda sin batería
             playPhoneDie() {
                 this.init();
                 const now = this.ctx.currentTime;
                 const osc = this.ctx.createOscillator();
                 const gain = this.ctx.createGain();
-                osc.type = 'sawtooth';
+                osc.type = 'sine';
                 osc.frequency.setValueAtTime(520, now);
-                osc.frequency.exponentialRampToValueAtTime(65, now + 0.65);
+                osc.frequency.exponentialRampToValueAtTime(95, now + 0.45);
                 gain.gain.setValueAtTime(0.18, now);
-                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.68);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.46);
                 osc.connect(gain);
                 gain.connect(this.ctx.destination);
                 osc.start(now);
-                osc.stop(now + 0.68);
+                osc.stop(now + 0.46);
             }
 
-            // Sonido de clic para botones, interruptores y cajón
+            // Clic mecánico para interruptores, cajón, control remoto y linterna
             playClick(freq = 320) {
                 this.init();
                 const now = this.ctx.currentTime;
@@ -499,24 +504,24 @@
                 osc.type = 'triangle';
                 osc.frequency.setValueAtTime(freq, now);
                 osc.frequency.exponentialRampToValueAtTime(freq * 0.45, now + 0.06);
-                gain.gain.setValueAtTime(0.16, now);
+                gain.gain.setValueAtTime(0.2, now);
                 gain.gain.exponentialRampToValueAtTime(0.001, now + 0.065);
                 osc.connect(gain);
                 gain.connect(this.ctx.destination);
                 osc.start(now);
-                osc.stop(now + 0.065);
+                osc.stop(now + 0.07);
             }
 
-            // Sonido de roce de tela al apartar las cortinas
+            // Roce de tela al abrir o cerrar las cortinas de la ventana
             playCurtainRustle() {
                 this.init();
                 const now = this.ctx.currentTime;
-                const duration = 0.45;
+                const duration = 0.35;
                 const bufferSize = Math.floor(this.ctx.sampleRate * duration);
                 const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
                 const data = buffer.getChannelData(0);
                 for (let i = 0; i < bufferSize; i++) {
-                    data[i] = (Math.random() * 2 - 1);
+                    data[i] = Math.random() * 2 - 1;
                 }
                 const noise = this.ctx.createBufferSource();
                 noise.buffer = buffer;
@@ -524,11 +529,11 @@
                 const filter = this.ctx.createBiquadFilter();
                 filter.type = 'bandpass';
                 filter.frequency.setValueAtTime(900, now);
-                filter.frequency.linearRampToValueAtTime(1600, now + duration);
+                filter.Q.value = 1.5;
 
                 const gain = this.ctx.createGain();
                 gain.gain.setValueAtTime(0.01, now);
-                gain.gain.linearRampToValueAtTime(0.18, now + 0.15);
+                gain.gain.linearRampToValueAtTime(0.18, now + 0.1);
                 gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
 
                 noise.connect(filter);
@@ -537,16 +542,52 @@
                 noise.start(now);
             }
 
-            // Pasos rápidos en madera al correr entre cama, ventana y puerta (estilo FNAF 4)
+            // Chirrido de madera al entreabrir o cerrar la puerta
+            playDoorCreak() {
+                this.init();
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(185, now);
+                osc.frequency.linearRampToValueAtTime(265, now + 0.18);
+                osc.frequency.linearRampToValueAtTime(150, now + 0.36);
+                gain.gain.setValueAtTime(0.11, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.37);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.38);
+            }
+
+            // Cerrojo metálico de la puerta principal
+            playDoorLock() {
+                this.init();
+                const now = this.ctx.currentTime;
+                [0, 0.08].forEach((offset, idx) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(idx === 0 ? 520 : 740, now + offset);
+                    gain.gain.setValueAtTime(0.16, now + offset);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + offset + 0.055);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now + offset);
+                    osc.stop(now + offset + 0.06);
+                });
+            }
+
+            // Pasos al correr por el cuarto o pasos pesados del intruso
             playFootstep(heavy = false) {
                 this.init();
                 const now = this.ctx.currentTime;
                 const osc = this.ctx.createOscillator();
                 const gain = this.ctx.createGain();
                 osc.type = 'sine';
-                osc.frequency.setValueAtTime(heavy ? 85 : 135, now);
-                osc.frequency.exponentialRampToValueAtTime(heavy ? 32 : 48, now + 0.11);
-                gain.gain.setValueAtTime(heavy ? 0.35 : 0.22, now);
+                osc.frequency.setValueAtTime(heavy ? 72 : 115, now);
+                osc.frequency.exponentialRampToValueAtTime(heavy ? 26 : 42, now + 0.11);
+                gain.gain.setValueAtTime(heavy ? 0.36 : 0.22, now);
                 gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
                 osc.connect(gain);
                 gain.connect(this.ctx.destination);
@@ -554,44 +595,7 @@
                 osc.stop(now + 0.12);
             }
 
-            // Sonido metálico de llave / pestillo en la puerta
-            playDoorLock() {
-                this.init();
-                const now = this.ctx.currentTime;
-                [0, 0.09].forEach((offset, idx) => {
-                    const osc = this.ctx.createOscillator();
-                    const gain = this.ctx.createGain();
-                    osc.type = 'square';
-                    osc.frequency.setValueAtTime(idx === 0 ? 520 : 680, now + offset);
-                    osc.frequency.exponentialRampToValueAtTime(210, now + offset + 0.07);
-                    gain.gain.setValueAtTime(0.16, now + offset);
-                    gain.gain.exponentialRampToValueAtTime(0.001, now + offset + 0.07);
-                    osc.connect(gain);
-                    gain.connect(this.ctx.destination);
-                    osc.start(now + offset);
-                    osc.stop(now + offset + 0.07);
-                });
-            }
-
-            // Crujido de puerta abriéndose o cerrándose
-            playDoorCreak() {
-                this.init();
-                const now = this.ctx.currentTime;
-                const osc = this.ctx.createOscillator();
-                const gain = this.ctx.createGain();
-                osc.type = 'sawtooth';
-                osc.frequency.setValueAtTime(140, now);
-                osc.frequency.linearRampToValueAtTime(230, now + 0.25);
-                osc.frequency.linearRampToValueAtTime(115, now + 0.55);
-                gain.gain.setValueAtTime(0.14, now);
-                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.58);
-                osc.connect(gain);
-                gain.connect(this.ctx.destination);
-                osc.start(now);
-                osc.stop(now + 0.58);
-            }
-
-            // Golpes en la puerta cuando la entidad intenta entrar
+            // Golpes en la puerta cuando la entidad intenta entrar o golpea con furia
             playDoorKnock() {
                 this.init();
                 const now = this.ctx.currentTime;
@@ -610,38 +614,212 @@
                 });
             }
 
-            // Estática blanca continua para la TV
-            toggleTVStatic(enable) {
+            // Golpes violentos y furiosos cuando el Laugher encuentra la puerta con llave
+            playViolentBanging() {
                 this.init();
+                const now = this.ctx.currentTime;
+                [0, 0.16, 0.31].forEach((offset) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(125, now + offset);
+                    osc.frequency.exponentialRampToValueAtTime(28, now + offset + 0.13);
+                    gain.gain.setValueAtTime(0.55, now + offset);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + offset + 0.14);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now + offset);
+                    osc.stop(now + offset + 0.14);
+                });
+            }
+
+            // Pasos acercándose por el pasillo exterior
+            playHallwayApproach() {
+                this.init();
+                const now = this.ctx.currentTime;
+                [0, 0.38].forEach((offset) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(75, now + offset);
+                    osc.frequency.exponentialRampToValueAtTime(34, now + offset + 0.16);
+                    gain.gain.setValueAtTime(0.24, now + offset);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + offset + 0.17);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now + offset);
+                    osc.stop(now + offset + 0.17);
+                });
+            }
+
+            // Gritos / lamentos distorsionados de la entidad Screamer en la puerta
+            playScreamerWail(muffled = false) {
+                this.init();
+                const now = this.ctx.currentTime;
+                const duration = 1.35;
+
+                const filter = this.ctx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.setValueAtTime(muffled ? 310 : 1450, now);
+
+                const masterGain = this.ctx.createGain();
+                masterGain.gain.setValueAtTime(0.001, now);
+                masterGain.gain.linearRampToValueAtTime(muffled ? 0.11 : 0.24, now + 0.25);
+                masterGain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+                filter.connect(masterGain);
+                masterGain.connect(this.ctx.destination);
+
+                [390, 412, 585].forEach((baseFreq, idx) => {
+                    const osc = this.ctx.createOscillator();
+                    osc.type = idx === 0 ? 'sawtooth' : 'triangle';
+                    osc.frequency.setValueAtTime(baseFreq, now);
+                    osc.frequency.linearRampToValueAtTime(baseFreq * 1.28, now + 0.45);
+                    osc.frequency.linearRampToValueAtTime(baseFreq * 0.72, now + duration);
+                    osc.connect(filter);
+                    osc.start(now);
+                    osc.stop(now + duration);
+                });
+            }
+
+            // Risas macabras de la entidad Laugher en la puerta
+            playLaugherCackle(muffled = false) {
+                this.init();
+                const now = this.ctx.currentTime;
+                const syllables = [0, 0.22, 0.44, 0.68];
+
+                const filter = this.ctx.createBiquadFilter();
+                filter.type = 'bandpass';
+                filter.frequency.setValueAtTime(muffled ? 340 : 950, now);
+                filter.Q.value = 3.2;
+                filter.connect(this.ctx.destination);
+
+                syllables.forEach((offset, idx) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sawtooth';
+                    const startFreq = 290 - idx * 24;
+                    osc.frequency.setValueAtTime(startFreq, now + offset);
+                    osc.frequency.exponentialRampToValueAtTime(startFreq * 0.65, now + offset + 0.16);
+
+                    gain.gain.setValueAtTime(0.001, now + offset);
+                    gain.gain.linearRampToValueAtTime(muffled ? 0.14 : 0.30, now + offset + 0.03);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + offset + 0.17);
+
+                    osc.connect(gain);
+                    gain.connect(filter);
+                    osc.start(now + offset);
+                    osc.stop(now + offset + 0.18);
+                });
+            }
+
+            // Roce de tela/sábanas al dejarse caer o salir de debajo de la cama
+            playBedRustle() {
+                this.init();
+                const now = this.ctx.currentTime;
+                const duration = 0.55;
+                const bufferSize = Math.floor(this.ctx.sampleRate * duration);
+                const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) {
+                    data[i] = (Math.random() * 2 - 1);
+                }
+
+                const noise = this.ctx.createBufferSource();
+                noise.buffer = buffer;
+
+                const filter = this.ctx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.setValueAtTime(650, now);
+                filter.frequency.linearRampToValueAtTime(1150, now + 0.22);
+                filter.frequency.linearRampToValueAtTime(380, now + duration);
+
+                const gain = this.ctx.createGain();
+                gain.gain.setValueAtTime(0.01, now);
+                gain.gain.linearRampToValueAtTime(0.26, now + 0.18);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+                noise.connect(filter);
+                filter.connect(gain);
+                gain.connect(this.ctx.destination);
+                noise.start(now);
+            }
+
+            // Estática blanca continua o zumbido grave de mala señal para la TV
+            toggleTVStatic(enable, isGoodSignal = true) {
+                this.init();
+                // Detener cualquier audio previo de TV antes de iniciar el nuevo
+                if (this.staticNode) {
+                    try { this.staticNode.stop(); } catch (e) {}
+                    this.staticNode.disconnect();
+                    this.staticNode = null;
+                }
+                if (this.badSignalOsc) {
+                    try { this.badSignalOsc.stop(); } catch (e) {}
+                    this.badSignalOsc.disconnect();
+                    this.badSignalOsc = null;
+                }
+                if (this.badSignalLfo) {
+                    try { this.badSignalLfo.stop(); } catch (e) {}
+                    this.badSignalLfo.disconnect();
+                    this.badSignalLfo = null;
+                }
+
                 if (enable) {
-                    if (this.staticNode) return;
-                    const bufferSize = this.ctx.sampleRate * 2;
-                    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
-                    const data = buffer.getChannelData(0);
-                    for (let i = 0; i < bufferSize; i++) {
-                        data[i] = Math.random() * 2 - 1;
-                    }
+                    if (isGoodSignal) {
+                        // Estática limpia (nieve blanca)
+                        const bufferSize = this.ctx.sampleRate * 2;
+                        const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+                        const data = buffer.getChannelData(0);
+                        for (let i = 0; i < bufferSize; i++) {
+                            data[i] = Math.random() * 2 - 1;
+                        }
 
-                    this.staticNode = this.ctx.createBufferSource();
-                    this.staticNode.buffer = buffer;
-                    this.staticNode.loop = true;
+                        this.staticNode = this.ctx.createBufferSource();
+                        this.staticNode.buffer = buffer;
+                        this.staticNode.loop = true;
 
-                    const filter = this.ctx.createBiquadFilter();
-                    filter.type = 'bandpass';
-                    filter.frequency.value = 1200;
+                        const filter = this.ctx.createBiquadFilter();
+                        filter.type = 'bandpass';
+                        filter.frequency.value = 1200;
 
-                    this.staticGain = this.ctx.createGain();
-                    this.staticGain.gain.value = 0.09;
+                        this.staticGain = this.ctx.createGain();
+                        this.staticGain.gain.value = 0.09;
 
-                    this.staticNode.connect(filter);
-                    filter.connect(this.staticGain);
-                    this.staticGain.connect(this.ctx.destination);
-                    this.staticNode.start();
-                } else {
-                    if (this.staticNode) {
-                        try { this.staticNode.stop(); } catch (e) {}
-                        this.staticNode.disconnect();
-                        this.staticNode = null;
+                        this.staticNode.connect(filter);
+                        filter.connect(this.staticGain);
+                        this.staticGain.connect(this.ctx.destination);
+                        this.staticNode.start();
+                    } else {
+                        // Mala señal: zumbido grave intermitente + interferencia oscura
+                        this.badSignalOsc = this.ctx.createOscillator();
+                        this.badSignalOsc.type = 'sawtooth';
+                        this.badSignalOsc.frequency.value = 62;
+
+                        const lowFilter = this.ctx.createBiquadFilter();
+                        lowFilter.type = 'lowpass';
+                        lowFilter.frequency.value = 190;
+
+                        const buzzGain = this.ctx.createGain();
+                        buzzGain.gain.value = 0.08;
+
+                        // LFO para hacer el zumbido grave intermitente
+                        this.badSignalLfo = this.ctx.createOscillator();
+                        this.badSignalLfo.type = 'square';
+                        this.badSignalLfo.frequency.value = 3.4;
+
+                        const lfoGain = this.ctx.createGain();
+                        lfoGain.gain.value = 0.07;
+
+                        this.badSignalLfo.connect(lfoGain);
+                        lfoGain.connect(buzzGain.gain);
+
+                        this.badSignalOsc.connect(lowFilter);
+                        lowFilter.connect(buzzGain);
+                        buzzGain.connect(this.ctx.destination);
+
+                        this.badSignalOsc.start();
+                        this.badSignalLfo.start();
                     }
                 }
             }
@@ -781,15 +959,19 @@
             timeElapsed: 0, // Segundos transcurridos en la noche
             nightDuration: 150, // 150 segundos reales = 6 horas (25s por hora)
             lightOn: true,
-            // Sistema de navegación estilo FNAF 4 con transiciones de 1.35 segundos
+            tvOn: false,
+            tvSignalGood: true, // true = estática limpia, false = mala señal
+            remoteAnimTimer: 0,
+            // Sistema de navegación estilo FNAF 4 con transiciones
             currentView: 'bed', // 'bed' | 'window' | 'door' | 'underbed'
             transition: {
                 active: false,
                 from: 'bed',
                 to: 'bed',
                 progress: 0, // 0 a 1
-                duration: 1.35, // 1.35 segundos de animación mirando al piso y corriendo
-                stepSoundTimer: 0
+                duration: 1.35,
+                stepSoundTimer: 0,
+                midSoundPlayed: false
             },
 
             // Apertura animada de cortinas (0 = cerradas desde la cama, 1 = abiertas en ventana)
@@ -829,9 +1011,15 @@
             // Amenaza 4: Puerta Principal e Intruso en el cuarto (Regla 4)
             doorLocked: true,
             doorAjar: false,
-            doorIntruderState: 'idle', // 'idle' | 'knocking' | 'entering' | 'searching' | 'leaving'
-            doorIntruderCooldown: 24,
+            doorIntruderState: 'idle', // 'idle' | 'at_door' | 'banging' | 'entering' | 'searching' | 'leaving'
+            doorEntityType: 'none', // 'none' (falsa alarma) | 'screamer' (gritos -> esconderse) | 'laugher' (risas -> llave)
+            doorIntruderCooldown: 20,
             doorIntruderTimer: 0,
+            doorEntityAudioTimer: 0,
+            doorCheckedByPlayer: false,
+            doorShakeX: 0,
+            doorShakeY: 0,
+            flashlightTimer: 0,
             intruderX: 0.5, // Posición horizontal en el cuarto durante búsqueda
             intruderStepTimer: 0,
 
@@ -874,6 +1062,7 @@
             doorControls: document.getElementById('doorControls'),
             btnToggleLock: document.getElementById('btnToggleLock'),
             btnPeekDoor: document.getElementById('btnPeekDoor'),
+            btnFlashlight: document.getElementById('btnFlashlight'),
             btnLeaveDoor: document.getElementById('btnLeaveDoor'),
             underBedControls: document.getElementById('underBedControls'),
             btnExitUnderBed: document.getElementById('btnExitUnderBed'),
@@ -909,10 +1098,12 @@
             state.timeElapsed = 0;
             state.lightOn = true;
             state.tvOn = false;
+            state.tvSignalGood = true;
             state.remoteAnimTimer = 0;
             state.currentView = 'bed';
             state.transition.active = false;
             state.transition.progress = 0;
+            state.transition.midSoundPlayed = false;
             state.curtainOpenAmount = 0;
             state.noteOpen = false;
 
@@ -937,8 +1128,14 @@
             state.doorLocked = true;
             state.doorAjar = false;
             state.doorIntruderState = 'idle';
-            state.doorIntruderCooldown = 22;
+            state.doorEntityType = 'none';
+            state.doorIntruderCooldown = 19;
             state.doorIntruderTimer = 0;
+            state.doorEntityAudioTimer = 0;
+            state.doorCheckedByPlayer = false;
+            state.doorShakeX = 0;
+            state.doorShakeY = 0;
+            state.flashlightTimer = 0;
 
             state.jumpscareActive = false;
             state.jumpscareType = '';
@@ -947,17 +1144,20 @@
             updateUIState();
         }
 
-        // Iniciar transición animada estilo FNAF 4 (1.35s) entre posiciones
+        // Iniciar transición animada estilo FNAF 4 entre posiciones
         function startViewTransition(targetView) {
             if (state.phase !== 'playing') return;
             if (state.transition.active || state.currentView === targetView) return;
+
+            const isUnderBedMove = (targetView === 'underbed' || state.currentView === 'underbed');
 
             state.transition.active = true;
             state.transition.from = state.currentView;
             state.transition.to = targetView;
             state.transition.progress = 0;
-            state.transition.duration = (targetView === 'underbed' || state.currentView === 'underbed') ? 1.15 : 1.35;
+            state.transition.duration = isUnderBedMove ? 0.95 : 1.35;
             state.transition.stepSoundTimer = 0;
+            state.transition.midSoundPlayed = false;
 
             // Si te alejas de la ventana, suena la cortina cerrándose
             if (state.currentView === 'window') {
@@ -970,7 +1170,12 @@
                 audio.playDoorCreak();
             }
 
-            audio.playFootstep(false);
+            // Sonido exclusivo: roce de sábanas/tela al meterse o salir de la cama vs. pasos al caminar
+            if (isUnderBedMove) {
+                audio.playBedRustle();
+            } else {
+                audio.playFootstep(false);
+            }
             updateUIState();
         }
 
@@ -980,24 +1185,26 @@
             if (state.lightOn) {
                 el.lightStatusDot.className = 'w-3 h-3 rounded-full bg-amber-400 shadow-[0_0_10px_#fbbf24]';
                 el.lightStatusText.textContent = 'LUZ: ENCENDIDA';
+                el.lightStatusText.className = 'text-xs sm:text-sm font-mono-retro text-zinc-200';
                 el.btnLightLabel.textContent = 'Apagar Luz';
-                el.btnWindowLight.textContent = '💡 Apagar Luz';
-                el.btnLightSwitch.classList.remove('bg-zinc-900', 'border-zinc-700');
-                el.btnLightSwitch.classList.add('bg-amber-950/90', 'border-amber-500/50');
             } else {
                 el.lightStatusDot.className = 'w-3 h-3 rounded-full bg-zinc-700';
                 el.lightStatusText.textContent = 'LUZ: APAGADA';
-                el.btnLightLabel.textContent = 'Encender Luz';
-                el.btnWindowLight.textContent = '💡 Encender Luz';
-                el.btnLightSwitch.classList.remove('bg-amber-950/90', 'border-amber-500/50');
-                el.btnLightSwitch.classList.add('bg-zinc-900', 'border-zinc-700');
+                el.lightStatusText.className = 'text-xs sm:text-sm font-mono-retro text-red-400 font-bold';
+                el.btnLightLabel.textContent = 'Prender Luz';
             }
 
-            // Estado de TV
+            // Estado de TV (Señal buena vs. Mala señal)
             if (state.tvOn) {
-                el.tvStatusDot.className = 'w-3 h-3 rounded-full bg-cyan-300 shadow-[0_0_10px_#67e8f9] animate-ping';
-                el.tvStatusText.textContent = 'TV: ESTÁTICA';
-                el.tvStatusText.className = 'text-xs sm:text-sm font-mono-retro text-cyan-300';
+                if (state.tvSignalGood) {
+                    el.tvStatusDot.className = 'w-3 h-3 rounded-full bg-cyan-300 shadow-[0_0_10px_#67e8f9] animate-ping';
+                    el.tvStatusText.textContent = 'TV: ESTÁTICA';
+                    el.tvStatusText.className = 'text-xs sm:text-sm font-mono-retro text-cyan-300';
+                } else {
+                    el.tvStatusDot.className = 'w-3 h-3 rounded-full bg-amber-500 shadow-[0_0_10px_#f59e0b] animate-pulse';
+                    el.tvStatusText.textContent = 'TV: MALA SEÑAL';
+                    el.tvStatusText.className = 'text-xs sm:text-sm font-mono-retro text-amber-400';
+                }
                 el.btnTVLabel.textContent = 'Apagar TV';
             } else {
                 el.tvStatusDot.className = 'w-3 h-3 rounded-full bg-zinc-600';
@@ -1006,10 +1213,18 @@
                 el.btnTVLabel.textContent = 'Prender TV';
             }
 
-            // Estado de la puerta principal
+            // Estado de la puerta principal y botón de linterna
             el.doorSubLabel.textContent = state.doorLocked ? 'Con llave' : (state.doorAjar ? 'Entreabierta' : 'Sin llave');
             el.btnToggleLock.textContent = state.doorLocked ? '🔓 Quitar Llave' : '🔑 Poner Llave';
             el.btnPeekDoor.textContent = state.doorAjar ? '🚪 Cerrar Puerta' : '👁️ Entreabrir';
+
+            if (state.doorAjar) {
+                el.btnFlashlight.classList.remove('opacity-45');
+                el.btnFlashlight.title = 'Alumbrar el pasillo con la linterna';
+            } else {
+                el.btnFlashlight.classList.add('opacity-45');
+                el.btnFlashlight.title = 'Entreabre la puerta primero para alumbrar';
+            }
 
             // Ocultar todos los controles durante transición de movimiento (como FNAF 4)
             const isMoving = state.transition.active;
@@ -1029,10 +1244,19 @@
             }
 
             // Banner de pistas auditivas y visuales
-            if (state.doorIntruderState === 'knocking') {
+            if (state.doorIntruderState === 'banging') {
                 el.audioCueBanner.classList.remove('hidden');
-                el.audioCueBox.textContent = '🚪 ¡TOC, TOC, TOC! ¡Algo está forzando la cerradura de la puerta!';
-                el.audioCueBox.className = 'bg-red-950/95 border border-red-500 text-red-200 font-mono-retro text-xs sm:text-sm px-4 py-2 rounded-full shadow-lg animate-bounce';
+                el.audioCueBox.textContent = '💥 ¡PUM! ¡PUM! ¡PUM! ¡Golpea la puerta con furia pero la llave resiste!';
+                el.audioCueBox.className = 'bg-amber-950/95 border border-amber-500 text-amber-200 font-mono-retro text-xs sm:text-sm px-4 py-2 rounded-full shadow-lg animate-bounce';
+            } else if (state.doorIntruderState === 'at_door') {
+                el.audioCueBanner.classList.remove('hidden');
+                if (state.currentView === 'door' && state.doorAjar) {
+                    el.audioCueBox.textContent = '👂 Escucha con atención... (NO prendas la linterna si oyes algo)';
+                    el.audioCueBox.className = 'bg-zinc-900/95 border border-amber-500/80 text-amber-200 font-mono-retro text-xs sm:text-sm px-4 py-2 rounded-full shadow-lg';
+                } else {
+                    el.audioCueBox.textContent = '👣 *Se escuchan pasos detenerse frente a la puerta principal...*';
+                    el.audioCueBox.className = 'bg-zinc-950/90 border border-zinc-600 text-zinc-200 font-mono-retro text-xs sm:text-sm px-4 py-2 rounded-full shadow-lg animate-pulse';
+                }
             } else if (state.doorIntruderState === 'entering' || state.doorIntruderState === 'searching') {
                 el.audioCueBanner.classList.remove('hidden');
                 el.audioCueBox.textContent = state.currentView === 'underbed'
@@ -1043,12 +1267,16 @@
                     : 'bg-red-950/95 border border-red-500 text-red-200 font-mono-retro text-xs sm:text-sm px-4 py-2 rounded-full shadow-lg animate-pulse';
             } else if (state.isBreathingOutside) {
                 el.audioCueBanner.classList.remove('hidden');
-                el.audioCueBox.textContent = state.tvOn
-                    ? '📺 La estática de la TV lo está tranquilizando...'
-                    : '🌬️ *Se escucha una respiración pesada afuera...*';
-                el.audioCueBox.className = state.tvOn
-                    ? 'bg-cyan-950/90 border border-cyan-500/70 text-cyan-200 font-mono-retro text-xs sm:text-sm px-4 py-2 rounded-full shadow-lg'
-                    : 'bg-red-950/90 border border-red-600/80 text-red-200 font-mono-retro text-xs sm:text-sm px-4 py-2 rounded-full shadow-lg animate-pulse';
+                if (state.tvOn && state.tvSignalGood) {
+                    el.audioCueBox.textContent = '📺 La estática limpia de la TV lo está tranquilizando...';
+                    el.audioCueBox.className = 'bg-cyan-950/90 border border-cyan-500/70 text-cyan-200 font-mono-retro text-xs sm:text-sm px-4 py-2 rounded-full shadow-lg';
+                } else if (state.tvOn && !state.tvSignalGood) {
+                    el.audioCueBox.textContent = '⚠️ ¡MALA SEÑAL! Apaga y prende la TV hasta agarrar estática limpia.';
+                    el.audioCueBox.className = 'bg-amber-950/95 border border-amber-500 text-amber-200 font-mono-retro text-xs sm:text-sm px-4 py-2 rounded-full shadow-lg animate-pulse';
+                } else {
+                    el.audioCueBox.textContent = '🌬️ *Se escucha una respiración pesada afuera...*';
+                    el.audioCueBox.className = 'bg-red-950/90 border border-red-600/80 text-red-200 font-mono-retro text-xs sm:text-sm px-4 py-2 rounded-full shadow-lg animate-pulse';
+                }
             } else if (!state.lightOn && !state.windowCreaturePresent) {
                 el.audioCueBanner.classList.remove('hidden');
                 el.audioCueBox.textContent = '⚠️ ¡La oscuridad es demasiado peligrosa! ¡Enciende la luz!';
@@ -1059,7 +1287,7 @@
 
             // Viñeta de peligro
             const inDanger = (!state.lightOn && !state.windowCreaturePresent) ||
-                             (state.isBreathingOutside && !state.tvOn && state.breathTimer > 5) ||
+                             (state.isBreathingOutside && !(state.tvOn && state.tvSignalGood) && state.breathTimer > 5) ||
                              (state.windowCreaturePresent && (state.lightOn || state.tvOn)) ||
                              ((state.doorIntruderState === 'entering' || state.doorIntruderState === 'searching') && state.currentView !== 'underbed');
             if (inDanger) {
@@ -1146,8 +1374,12 @@
             if (state.phase !== 'playing' || state.transition.active) return;
             audio.playClick(340);
             state.tvOn = !state.tvOn;
+            if (state.tvOn) {
+                // 50% de probabilidad de estática limpia vs. 50% de mala señal
+                state.tvSignalGood = Math.random() < 0.5;
+            }
             state.remoteAnimTimer = 0.55; // Levanta el control remoto en mano
-            audio.toggleTVStatic(state.tvOn);
+            audio.toggleTVStatic(state.tvOn, state.tvSignalGood);
             updateUIState();
         });
 
@@ -1181,7 +1413,16 @@
                 audio.playDoorCreak();
             }
             state.doorLocked = !state.doorLocked;
+            state.doorCheckedByPlayer = true;
             audio.playDoorLock();
+
+            // Si está el Laugher afuera y el jugador cierra con llave, empieza a golpear con furia 4s
+            if (state.doorLocked && state.doorIntruderState === 'at_door' && state.doorEntityType === 'laugher') {
+                state.doorIntruderState = 'banging';
+                state.doorIntruderTimer = 4.0;
+                state.doorEntityAudioTimer = 0;
+                audio.playViolentBanging();
+            }
             updateUIState();
         });
 
@@ -1193,8 +1434,49 @@
                 audio.playDoorLock();
             }
             state.doorAjar = !state.doorAjar;
+            state.doorCheckedByPlayer = true;
             audio.playDoorCreak();
+
+            // Al entreabrir, reproducir inmediatamente el sonido de la entidad si está ahí
+            if (state.doorAjar && state.doorIntruderState === 'at_door') {
+                if (state.doorEntityType === 'screamer') {
+                    audio.playScreamerWail(false);
+                    state.doorEntityAudioTimer = 1.9;
+                } else if (state.doorEntityType === 'laugher') {
+                    audio.playLaugherCackle(false);
+                    state.doorEntityAudioTimer = 1.7;
+                }
+            }
             updateUIState();
+        });
+
+        el.btnFlashlight.addEventListener('click', () => {
+            if (state.phase !== 'playing' || state.currentView !== 'door') return;
+            if (!state.doorAjar) {
+                audio.playClick(160);
+                return;
+            }
+
+            audio.playClick(640);
+            state.flashlightTimer = 1.25;
+
+            if (state.doorIntruderState === 'at_door') {
+                if (state.doorEntityType === 'screamer' || state.doorEntityType === 'laugher') {
+                    triggerGameOver(
+                        'door_flashlight',
+                        'Rompiste la Regla 4',
+                        'Alumbraste con la linterna hacia el pasillo mientras la entidad acechaba detrás de la puerta entreabierta. La luz la atrajo al instante.'
+                    );
+                    return;
+                } else if (state.doorEntityType === 'none') {
+                    // Falsa alarma confirmada con la linterna
+                    state.doorIntruderState = 'idle';
+                    state.doorIntruderCooldown = 20 + Math.random() * 10;
+                    el.audioCueBanner.classList.remove('hidden');
+                    el.audioCueBox.textContent = '🔦 El pasillo está completamente vacío. Era una falsa alarma.';
+                    el.audioCueBox.className = 'bg-emerald-950/90 border border-emerald-500/70 text-emerald-200 font-mono-retro text-xs sm:text-sm px-4 py-2 rounded-full shadow-lg';
+                }
+            }
         });
 
         el.btnHideUnderBed.addEventListener('click', () => {
@@ -1268,28 +1550,25 @@
          * ============================================================================
          */
         function updateGameLogic(dt) {
-            // Animación errática constante de la cabeza del Ser del Bosque
-            state.entityTwitchTimer -= dt;
-            if (state.entityTwitchTimer <= 0) {
-                state.entityTwitchTimer = 0.05 + Math.random() * 0.14;
-                state.entityHeadAngle = (Math.random() - 0.5) * 0.95;
-                state.entityHeadOffsetX = (Math.random() - 0.5) * 14;
-                state.entityHeadOffsetY = (Math.random() - 0.5) * 8;
-            }
-
-            // Temporizador de animación del control remoto de la TV
-            if (state.remoteAnimTimer > 0) {
-                state.remoteAnimTimer = Math.max(0, state.remoteAnimTimer - dt);
-            }
-
-            // Actualizar animación de transición estilo FNAF 4 (1.15 - 1.35s)
+            // Actualizar animación de transición estilo FNAF 4
             if (state.transition.active) {
                 state.transition.progress += dt / state.transition.duration;
-                state.transition.stepSoundTimer += dt;
-                if (state.transition.stepSoundTimer >= 0.24) {
-                    state.transition.stepSoundTimer = 0;
-                    audio.playFootstep(false);
+                const isUnderBedMove = (state.transition.to === 'underbed' || state.transition.from === 'underbed');
+
+                if (isUnderBedMove) {
+                    // Segundo roce de tela/colchón al deslizarse bajo la cama (sin pasos de carrera)
+                    if (!state.transition.midSoundPlayed && state.transition.progress >= 0.48) {
+                        state.transition.midSoundPlayed = true;
+                        audio.playBedRustle();
+                    }
+                } else {
+                    state.transition.stepSoundTimer += dt;
+                    if (state.transition.stepSoundTimer >= 0.24) {
+                        state.transition.stepSoundTimer = 0;
+                        audio.playFootstep(false);
+                    }
                 }
+
                 if (state.transition.progress >= 1) {
                     state.transition.active = false;
                     state.transition.progress = 0;
@@ -1299,6 +1578,14 @@
                     }
                     updateUIState();
                 }
+            }
+
+            // Temporizador de haz de linterna en la puerta y animación del control remoto
+            if (state.flashlightTimer > 0) {
+                state.flashlightTimer = Math.max(0, state.flashlightTimer - dt);
+            }
+            if (state.remoteAnimTimer > 0) {
+                state.remoteAnimTimer = Math.max(0, state.remoteAnimTimer - dt);
             }
 
             // Animar apertura suave de las cortinas al llegar a la ventana
@@ -1318,15 +1605,19 @@
             }
 
             // ------------------------------------------------------------------------
-            // AMENAZA 1: RESPIRACIÓN AFUERA -> PRENDER TV CON EL CONTROL REMOTO
+            // AMENAZA 1: RESPIRACIÓN AFUERA -> PRENDER TV CON ESTÁTICA LIMPIA
             // ------------------------------------------------------------------------
+            const otherMajorThreatActive = state.windowCreaturePresent || state.doorIntruderState !== 'idle';
+
             if (!state.isBreathingOutside) {
-                state.nextBreathCooldown -= scaledDt;
-                if (state.nextBreathCooldown <= 0) {
-                    state.isBreathingOutside = true;
-                    state.breathTimer = 0;
-                    state.breathCalmProgress = 0;
-                    state.breathSoundTimer = 0;
+                if (!otherMajorThreatActive) {
+                    state.nextBreathCooldown -= scaledDt;
+                    if (state.nextBreathCooldown <= 0) {
+                        state.isBreathingOutside = true;
+                        state.breathTimer = 0;
+                        state.breathCalmProgress = 0;
+                        state.breathSoundTimer = 0;
+                    }
                 }
             } else {
                 state.breathTimer += scaledDt;
@@ -1336,17 +1627,20 @@
                     state.breathSoundTimer = 2.7;
                 }
 
-                if (state.tvOn) {
+                // Solo la estática limpia (tvSignalGood === true) calma la respiración
+                if (state.tvOn && state.tvSignalGood) {
                     state.breathCalmProgress += dt;
                     if (state.breathCalmProgress >= 3.2) {
                         state.isBreathingOutside = false;
-                        state.nextBreathCooldown = 15 + Math.random() * 10;
+                        state.nextBreathCooldown = 16 + Math.random() * 10;
                     }
-                } else if (state.breathTimer >= 11.5) {
+                } else if (state.breathTimer >= 12.5) {
                     triggerGameOver(
                         'breath',
                         'Rompiste la Regla 1',
-                        'Lo escuchaste respirar afuera pero no usaste el control para encender la TV en el canal de estática a tiempo.'
+                        state.tvOn && !state.tvSignalGood
+                            ? 'Dejaste la TV en mala señal (barras de interferencia). Debías apagarla y prenderla de nuevo hasta sintonizar estática limpia.'
+                            : 'Lo escuchaste respirar afuera pero no encendiste la TV en el canal de estática limpia a tiempo.'
                     );
                     return;
                 }
@@ -1356,11 +1650,13 @@
             // AMENAZA 2: EL SER DEL BOSQUE (A LO LEJOS ENTRE LOS ÁRBOLES)
             // ------------------------------------------------------------------------
             if (state.forestEntityStage === 0) {
-                state.forestEntityTimer -= scaledDt;
-                if (state.forestEntityTimer <= 0) {
-                    state.forestEntityStage = 1;
-                    state.forestEntityTimer = 11.5;
-                    audio.playEntityTwitch();
+                if (state.doorIntruderState !== 'searching') {
+                    state.forestEntityTimer -= scaledDt;
+                    if (state.forestEntityTimer <= 0) {
+                        state.forestEntityStage = 1;
+                        state.forestEntityTimer = 12.5;
+                        audio.playEntityTwitch();
+                    }
                 }
             } else {
                 // Solo retrocede si vas a la ventana, apartas la cortina y lo miras fijamente
@@ -1369,16 +1665,16 @@
                     if (state.forestRepelProgress >= 2.0) {
                         state.forestEntityStage = 0;
                         state.forestRepelProgress = 0;
-                        state.forestEntityTimer = 12 + Math.random() * 8;
+                        state.forestEntityTimer = 13 + Math.random() * 8;
                         audio.playEntityTwitch();
                     }
-                } else {
+                } else if (state.doorIntruderState !== 'searching') {
                     state.forestRepelProgress = Math.max(0, state.forestRepelProgress - dt * 0.35);
                     state.forestEntityTimer -= scaledDt;
                     if (state.forestEntityTimer <= 0) {
                         if (state.forestEntityStage === 1) {
                             state.forestEntityStage = 2;
-                            state.forestEntityTimer = 11.0;
+                            state.forestEntityTimer = 12.0;
                             audio.playEntityTwitch();
                         } else {
                             triggerGameOver(
@@ -1395,13 +1691,17 @@
             // ------------------------------------------------------------------------
             // AMENAZA 3: LA ENTIDAD DE LA VENTANA (CUBRE COMPLETAMENTE EL CRISTAL)
             // ------------------------------------------------------------------------
+            const blockWindowCreatureSpawn = state.isBreathingOutside || state.doorIntruderState !== 'idle';
+
             if (!state.windowCreaturePresent) {
-                state.windowCreatureCooldown -= scaledDt;
-                if (state.windowCreatureCooldown <= 0) {
-                    state.windowCreaturePresent = true;
-                    state.windowCreatureLightTimer = 0;
-                    state.windowCreatureDarkCalmProgress = 0;
-                    audio.playEntityTwitch();
+                if (!blockWindowCreatureSpawn) {
+                    state.windowCreatureCooldown -= scaledDt;
+                    if (state.windowCreatureCooldown <= 0) {
+                        state.windowCreaturePresent = true;
+                        state.windowCreatureLightTimer = 0;
+                        state.windowCreatureDarkCalmProgress = 0;
+                        audio.playEntityTwitch();
+                    }
                 }
             } else {
                 // Si la luz O la TV están encendidas, te detecta por la ventana
@@ -1427,49 +1727,141 @@
                 }
             }
 
-            // ------------------------------------------------------------------------
-            // OSCURIDAD LETAL (CUANDO NO ESTÁ LA CRIATURA DE LA VENTANA)
-            // ------------------------------------------------------------------------
+            // Sacudida errática de la cabeza del Ser del Bosque (cuerpo inmóvil)
+            if (state.forestEntityStage > 0) {
+                state.entityTwitchTimer -= dt;
+                if (state.entityTwitchTimer <= 0) {
+                    state.entityHeadAngle = (Math.random() - 0.5) * 0.85;
+                    state.entityHeadOffsetX = (Math.random() - 0.5) * 16;
+                    state.entityHeadOffsetY = (Math.random() - 0.5) * 10;
+                    state.entityTwitchTimer = 0.06 + Math.random() * 0.14;
+                }
+            } else {
+                state.entityHeadAngle = 0;
+                state.entityHeadOffsetX = 0;
+                state.entityHeadOffsetY = 0;
+            }
+
+            // Regla 2: Apagar la luz cuando NO está la criatura ancha en la ventana es letal
             if (!state.lightOn && !state.windowCreaturePresent) {
-                state.darknessDangerTimer += dt;
+                state.darknessDangerTimer += scaledDt;
                 state.heartbeatTimer -= dt;
                 if (state.heartbeatTimer <= 0) {
                     audio.playHeartbeat();
-                    state.heartbeatTimer = Math.max(0.35, 0.9 - state.darknessDangerTimer * 0.12);
+                    state.heartbeatTimer = Math.max(0.45, 1.1 - state.darknessDangerTimer * 0.08);
                 }
-                if (state.darknessDangerTimer >= 4.4) {
+                if (state.darknessDangerTimer >= 7.5) {
                     triggerGameOver(
                         'darkness',
                         'Rompiste la Regla 2',
-                        'Apagaste la luz cuando la criatura NO estaba cubriendo la ventana. La oscuridad de esta habitación es letal.'
+                        'Apagaste la luz de la habitación sin que la entidad ancha estuviera pegada a tu ventana. La oscuridad te consumió.'
                     );
                     return;
                 }
             } else {
-                state.darknessDangerTimer = Math.max(0, state.darknessDangerTimer - dt * 1.5);
+                state.darknessDangerTimer = Math.max(0, state.darknessDangerTimer - dt * 2);
             }
 
             // ------------------------------------------------------------------------
-            // AMENAZA 4: ENTIDAD DE LA PUERTA PRINCIPAL -> ESCONDERSE DEBAJO DE LA CAMA
+            // AMENAZA 4: ENTIDAD DE LA PUERTA PRINCIPAL (LINTERNA, GRITOS VS. RISAS)
             // ------------------------------------------------------------------------
+            const blockDoorSpawn = state.isBreathingOutside || state.windowCreaturePresent;
+            state.doorShakeX = 0;
+            state.doorShakeY = 0;
+
             if (state.doorIntruderState === 'idle') {
-                state.doorIntruderCooldown -= scaledDt;
-                if (state.doorIntruderCooldown <= 0) {
-                    state.doorIntruderState = 'knocking';
-                    // Si tiene llave tarda más en forzarla (5.5s), si no tiene llave entra rápido (2.5s)
-                    state.doorIntruderTimer = state.doorLocked ? 5.5 : 2.5;
-                    audio.playDoorKnock();
+                if (!blockDoorSpawn) {
+                    state.doorIntruderCooldown -= scaledDt;
+                    if (state.doorIntruderCooldown <= 0) {
+                        state.doorIntruderState = 'at_door';
+                        state.doorCheckedByPlayer = false;
+                        const roll = Math.random();
+                        if (roll < 0.28) {
+                            state.doorEntityType = 'none'; // Falsa alarma
+                            state.doorIntruderTimer = 11.0;
+                        } else if (roll < 0.64) {
+                            state.doorEntityType = 'screamer'; // Gritos -> esconderse bajo la cama
+                            state.doorIntruderTimer = 14.0;
+                        } else {
+                            state.doorEntityType = 'laugher'; // Risas -> cerrar con llave
+                            state.doorIntruderTimer = 14.0;
+                        }
+                        state.doorEntityAudioTimer = 1.2;
+                        audio.playHallwayApproach();
+                    }
                 }
-            } else if (state.doorIntruderState === 'knocking') {
+            } else if (state.doorIntruderState === 'at_door') {
                 state.doorIntruderTimer -= scaledDt;
+                state.doorEntityAudioTimer -= dt;
+
+                const isListeningAtDoor = (state.currentView === 'door' && state.doorAjar);
+                if (state.doorEntityAudioTimer <= 0) {
+                    if (state.doorEntityType === 'screamer') {
+                        audio.playScreamerWail(!isListeningAtDoor);
+                        state.doorEntityAudioTimer = isListeningAtDoor ? 2.1 : 3.2;
+                    } else if (state.doorEntityType === 'laugher') {
+                        audio.playLaugherCackle(!isListeningAtDoor);
+                        state.doorEntityAudioTimer = isListeningAtDoor ? 1.9 : 3.0;
+                    }
+                }
+
                 if (state.doorIntruderTimer <= 0) {
-                    // Fuerza la cerradura y abre la puerta
-                    state.doorLocked = false;
-                    state.doorAjar = true;
-                    state.doorIntruderState = 'entering';
-                    state.doorIntruderTimer = 2.2;
-                    audio.playDoorLock();
-                    audio.playDoorCreak();
+                    if (state.doorEntityType === 'none') {
+                        // La falsa alarma termina tranquilamente
+                        state.doorIntruderState = 'idle';
+                        state.doorIntruderCooldown = 20 + Math.random() * 10;
+                    } else if (state.doorEntityType === 'screamer') {
+                        if (state.doorLocked) {
+                            // Si pusiste llave contra el Screamer, rompe la cerradura y te mata
+                            triggerGameOver(
+                                'screamer_locked',
+                                'Rompiste la Regla 4',
+                                'Cerraste con llave contra la entidad que emitía gritos distorsionados. Destrozó la puerta en segundos y te atrapó.'
+                            );
+                            return;
+                        } else {
+                            // Entra al cuarto a buscarte: debes estar debajo de la cama
+                            state.doorAjar = true;
+                            state.doorIntruderState = 'entering';
+                            state.doorIntruderTimer = 1.6;
+                            audio.playDoorCreak();
+                        }
+                    } else if (state.doorEntityType === 'laugher') {
+                        if (state.doorLocked) {
+                            // Si estaba cerrada con llave, golpea con furia 4 segundos y se va
+                            state.doorIntruderState = 'banging';
+                            state.doorIntruderTimer = 4.0;
+                            state.doorEntityAudioTimer = 0;
+                            audio.playViolentBanging();
+                        } else {
+                            // No cerraste con llave a tiempo contra el Laugher
+                            triggerGameOver(
+                                'laugher_unlocked',
+                                'Rompiste la Regla 4',
+                                'Escuchaste las risas macabras detrás de la puerta pero no la cerraste con llave a tiempo. La entidad entró al cuarto.'
+                            );
+                            return;
+                        }
+                    }
+                }
+            } else if (state.doorIntruderState === 'banging') {
+                // El Laugher golpea violentamente la puerta cerrada con llave durante 4 segundos
+                state.doorIntruderTimer -= dt;
+                state.doorEntityAudioTimer -= dt;
+                state.doorShakeX = (Math.random() - 0.5) * 16;
+                state.doorShakeY = (Math.random() - 0.5) * 10;
+
+                if (state.doorEntityAudioTimer <= 0) {
+                    audio.playViolentBanging();
+                    state.doorEntityAudioTimer = 0.52;
+                }
+
+                if (state.doorIntruderTimer <= 0) {
+                    state.doorShakeX = 0;
+                    state.doorShakeY = 0;
+                    state.doorIntruderState = 'idle';
+                    state.doorEntityType = 'none';
+                    state.doorIntruderCooldown = 22 + Math.random() * 10;
                 }
             } else if (state.doorIntruderState === 'entering') {
                 state.doorIntruderTimer -= scaledDt;
@@ -1479,12 +1871,12 @@
                         triggerGameOver(
                             'door_intruder',
                             'Rompiste la Regla 4',
-                            'La entidad abrió la puerta principal y te vio fuera de tu escondite. Debías meterte debajo de la cama en cuanto escucharas que forzaba la puerta.'
+                            'La entidad de los gritos entró al cuarto y te vio fuera de tu escondite. Debías esconderte debajo de la cama.'
                         );
                         return;
                     }
                     state.doorIntruderState = 'searching';
-                    state.doorIntruderTimer = 6.5;
+                    state.doorIntruderTimer = 6.2;
                     state.intruderX = 0.52;
                     state.intruderStepTimer = 0;
                 }
@@ -1501,7 +1893,6 @@
 
                 state.doorIntruderTimer -= dt;
                 state.intruderStepTimer -= dt;
-                // Camina de un lado a otro del cuarto mientras el jugador ve sus piernas desde abajo de la cama
                 state.intruderX = 0.5 + Math.sin(state.doorIntruderTimer * 1.3) * 0.24;
 
                 if (state.intruderStepTimer <= 0) {
@@ -1520,7 +1911,8 @@
                 state.doorIntruderTimer -= dt;
                 if (state.doorIntruderTimer <= 0) {
                     state.doorIntruderState = 'idle';
-                    state.doorIntruderCooldown = 26 + Math.random() * 12;
+                    state.doorEntityType = 'none';
+                    state.doorIntruderCooldown = 24 + Math.random() * 12;
                 }
             }
 
@@ -1751,6 +2143,9 @@
 
         function drawWindowAndForest(winX, winY, winW, winH, curtainOpen = 1) {
             ctx.save();
+            ctx.beginPath();
+            ctx.rect(winX, winY, winW, winH);
+            ctx.clip();
 
             // Fondo del cielo nocturno del bosque (claro iluminado por la luna para contraste)
             const skyGrad = ctx.createLinearGradient(winX, winY, winX, winY + winH);
@@ -1760,66 +2155,148 @@
             ctx.fillStyle = skyGrad;
             ctx.fillRect(winX, winY, winW, winH);
 
-            // Luna llena brillante detrás de los árboles
-            ctx.fillStyle = 'rgba(226, 238, 255, 0.32)';
+            // Luna pálida y halo en el cielo del bosque
+            const moonX = winX + winW * 0.74;
+            const moonY = winY + winH * 0.22;
+            const moonHalo = ctx.createRadialGradient(moonX, moonY, 6, moonX, moonY, 95);
+            moonHalo.addColorStop(0, 'rgba(226, 232, 240, 0.35)');
+            moonHalo.addColorStop(1, 'rgba(226, 232, 240, 0)');
+            ctx.fillStyle = moonHalo;
+            ctx.fillRect(winX, winY, winW, winH);
+
+            ctx.fillStyle = '#e2e8f0';
             ctx.beginPath();
-            ctx.arc(winX + winW * 0.72, winY + winH * 0.24, Math.min(winW, winH) * 0.11, 0, Math.PI * 2);
+            ctx.arc(moonX, moonY, 20, 0, Math.PI * 2);
             ctx.fill();
 
-            // Siluetas de árboles del bosque (dejando un claro central para ver al Ser del Bosque)
-            ctx.fillStyle = '#03060c';
-            const treePositions = [0.07, 0.19, 0.31, 0.69, 0.82, 0.94];
-            treePositions.forEach((pos, idx) => {
-                const tx = winX + winW * pos;
-                const tw = winW * (0.048 + (idx % 2) * 0.02);
-                ctx.fillRect(tx - tw / 2, winY, tw, winH);
+            // Suelo del claro del bosque
+            const groundY = winY + winH * 0.78;
+            ctx.fillStyle = '#050912';
+            ctx.fillRect(winX, groundY, winW, winY + winH - groundY);
+
+            // Siluetas de pinos del bosque en segundo plano
+            const treePositions = [0.08, 0.20, 0.34, 0.66, 0.80, 0.92];
+            treePositions.forEach((txRatio, idx) => {
+                const tx = winX + winW * txRatio;
+                const treeH = winH * (0.55 + (idx % 3) * 0.08);
+                ctx.fillStyle = '#03060c';
+                ctx.fillRect(tx - 6, groundY - treeH * 0.35, 12, treeH * 0.35);
+                for (let tier = 0; tier < 3; tier++) {
+                    const tierY = groundY - treeH * (0.28 + tier * 0.22);
+                    const tierW = 36 - tier * 7;
+                    ctx.beginPath();
+                    ctx.moveTo(tx - tierW, tierY);
+                    ctx.lineTo(tx, tierY - treeH * 0.32);
+                    ctx.lineTo(tx + tierW, tierY);
+                    ctx.closePath();
+                    ctx.fill();
+                }
             });
 
-            // Dibujar al SER DEL BOSQUE en el claro entre los árboles (Amenaza 3)
-            if (state.forestEntityStage === 1) {
-                drawForestEntity(winX + winW * 0.49, winY + winH * 0.94, winH / 340, 0.85);
-            } else if (state.forestEntityStage === 2) {
-                drawForestEntity(winX + winW * 0.50, winY + winH * 0.99, winH / 235, 0.98);
+            // El Ser del Bosque entre los árboles (cuando no está bloqueado por la criatura del cristal)
+            if (state.forestEntityStage > 0 && !state.windowCreaturePresent) {
+                const entityScale = state.forestEntityStage === 1 ? 0.58 : 0.96;
+                const entityY = state.forestEntityStage === 1 ? groundY + 4 : groundY + 26;
+                drawForestEntity(winX + winW * 0.48, entityY, entityScale, 0.96);
             }
 
-            // Dibujar la ENTIDAD DE LA VENTANA cubriendo COMPLETAMENTE todo el cristal (Amenaza 2)
+            // Si la criatura ancha de la ventana está presente, cubre el 100% del cristal
             if (state.windowCreaturePresent) {
                 drawWindowCreature(winX, winY, winW, winH);
             }
 
-            // Reflejo sutil del cristal
-            ctx.fillStyle = 'rgba(180, 210, 255, 0.04)';
+            // Travesaños de madera del cristal de la ventana
+            ctx.strokeStyle = state.lightOn ? '#2c2018' : '#090706';
+            ctx.lineWidth = 6;
             ctx.beginPath();
-            ctx.moveTo(winX, winY);
-            ctx.lineTo(winX + winW * 0.45, winY);
-            ctx.lineTo(winX + winW * 0.15, winY + winH);
-            ctx.lineTo(winX, winY + winH);
-            ctx.closePath();
-            ctx.fill();
-
-            // Marco de madera de la ventana y barrotes centrales
-            ctx.strokeStyle = state.lightOn ? '#2a1d15' : '#060505';
-            ctx.lineWidth = Math.max(8, winW * 0.035);
-            ctx.strokeRect(winX, winY, winW, winH);
-
-            ctx.lineWidth = Math.max(4, winW * 0.015);
-            ctx.beginPath();
-            ctx.moveTo(winX + winW / 2, winY);
-            ctx.lineTo(winX + winW / 2, winY + winH);
-            ctx.moveTo(winX, winY + winH / 2);
-            ctx.lineTo(winX + winW, winY + winH / 2);
+            ctx.moveTo(winX + winW * 0.5, winY);
+            ctx.lineTo(winX + winW * 0.5, winY + winH);
+            ctx.moveTo(winX, winY + winH * 0.5);
+            ctx.lineTo(winX + winW, winY + winH * 0.5);
             ctx.stroke();
 
-            // Dibujar cortinas encima de la ventana (cerradas desde cama, abiertas en ventana)
+            // Cortinas de tela (cerradas desde la cama, se apartan en la vista de ventana)
             drawWindowCurtains(winX, winY, winW, winH, curtainOpen);
 
             ctx.restore();
+
+            // Marco exterior de la ventana
+            ctx.strokeStyle = state.lightOn ? '#3b2b20' : '#0d0b09';
+            ctx.lineWidth = 10;
+            ctx.strokeRect(winX, winY, winW, winH);
         }
 
-        // 4) ANIMACIÓN DE TRANSICIÓN ESTILO FNAF 4 (MIRANDO AL PISO Y CORRIENDO 1.35s)
+        // 4) ANIMACIÓN DE TRANSICIÓN ESTILO FNAF 4 (CORRER AL PISO VS. DESLIZARSE BAJO LA CAMA)
         function drawFnaf4RunningTransition(w, h) {
             const p = state.transition.progress;
             const isUnderBedMove = state.transition.to === 'underbed' || state.transition.from === 'underbed';
+
+            // Animación exclusiva al meterse o salir de debajo de la cama:
+            // Giro brusco hacia abajo y hacia un lado mientras el borde del colchón y las sábanas cubren la vista
+            if (isUnderBedMove) {
+                const rawT = state.transition.to === 'underbed' ? p : (1 - p);
+                const ease = rawT < 0.5 ? 2 * rawT * rawT : 1 - Math.pow(-2 * rawT + 2, 2) / 2;
+
+                const rollAngle = Math.sin(ease * Math.PI * 0.88) * 0.46;
+                const dropY = ease * h * 0.38;
+                const sideShiftX = -Math.sin(ease * Math.PI) * w * 0.14;
+
+                ctx.save();
+                ctx.translate(w * 0.5 + sideShiftX, h * 0.5 + dropY);
+                ctx.rotate(rollAngle);
+                ctx.translate(-w * 0.5, -h * 0.5);
+
+                // Pared de la habitación inclinándose al caer al costado de la cama
+                ctx.fillStyle = state.lightOn ? '#221a14' : '#030305';
+                ctx.fillRect(-140, -140, w + 280, h + 280);
+
+                // Piso de madera subiendo hacia el nivel de los ojos al agacharse
+                const floorTopY = h * (0.76 - ease * 0.24);
+                const floorGrad = ctx.createLinearGradient(0, floorTopY, 0, h + 160);
+                if (state.lightOn) {
+                    floorGrad.addColorStop(0, '#1c140e');
+                    floorGrad.addColorStop(1, '#3b291d');
+                } else {
+                    floorGrad.addColorStop(0, '#040406');
+                    floorGrad.addColorStop(1, '#0c0b0f');
+                }
+                ctx.fillStyle = floorGrad;
+                ctx.fillRect(-140, floorTopY, w + 280, h - floorTopY + 160);
+
+                // Tablas horizontales del suelo
+                ctx.strokeStyle = state.lightOn ? 'rgba(0,0,0,0.5)' : 'rgba(255,255,255,0.04)';
+                ctx.lineWidth = 2;
+                for (let row = 0; row < 7; row++) {
+                    const yLine = floorTopY + ((row + 1) / 7) * (h - floorTopY + 80);
+                    ctx.beginPath();
+                    ctx.moveTo(-140, yLine);
+                    ctx.lineTo(w + 140, yLine);
+                    ctx.stroke();
+                }
+
+                // Borde lateral del colchón y sábanas bajando desde la parte superior hasta cubrir la vista
+                const coverBottomY = -h * 0.18 + ease * (h * 0.50);
+
+                // Colchón grueso bajando desde arriba
+                ctx.fillStyle = state.lightOn ? '#1e293b' : '#06080d';
+                ctx.fillRect(-140, -160, w + 280, coverBottomY + 140);
+
+                // Pliegues de sábanas colgando en el borde inferior del colchón
+                ctx.fillStyle = state.lightOn ? '#0f172a' : '#030407';
+                ctx.fillRect(-140, coverBottomY - 24, w + 280, 28);
+
+                ctx.strokeStyle = state.lightOn ? 'rgba(148, 163, 184, 0.14)' : 'rgba(255,255,255,0.03)';
+                ctx.lineWidth = 3;
+                for (let fold = -100; fold < w + 100; fold += 48) {
+                    ctx.beginPath();
+                    ctx.moveTo(fold, coverBottomY - 24);
+                    ctx.quadraticCurveTo(fold + 14, coverBottomY - 10, fold + 4, coverBottomY + 6);
+                    ctx.stroke();
+                }
+
+                ctx.restore();
+                return;
+            }
 
             // Curva de inclinación de cabeza hacia el piso (baja rápido al inicio, mira el suelo corriendo, sube al llegar)
             const lookDownPitch = Math.sin(p * Math.PI);
@@ -1896,15 +2373,6 @@
             ctx.lineTo(w + 80, h + 100);
             ctx.closePath();
             ctx.fill();
-
-            // Si se está metiendo o saliendo de debajo de la cama, se ve el borde del colchón pasar
-            if (isUnderBedMove) {
-                const frameY = state.transition.to === 'underbed'
-                    ? h * (0.05 + p * 0.40)
-                    : h * (0.45 - p * 0.40);
-                ctx.fillStyle = '#07080b';
-                ctx.fillRect(-80, -80, w + 160, frameY);
-            }
 
             ctx.restore();
         }
@@ -2032,15 +2500,23 @@
 
                 const doorW = Math.min(w * 0.56, 420);
                 const doorH = h * 0.80;
-                const doorX = (w - doorW) / 2;
-                const doorY = h * 0.08;
+                const doorX = (w - doorW) / 2 + state.doorShakeX;
+                const doorY = h * 0.08 + state.doorShakeY;
 
-                // Oscuridad del pasillo exterior detrás de la puerta
-                ctx.fillStyle = '#010102';
+                // Oscuridad o iluminación del pasillo exterior detrás de la puerta
+                if (state.doorAjar && state.flashlightTimer > 0) {
+                    const flashAlpha = Math.min(1, state.flashlightTimer * 1.4);
+                    const hallGrad = ctx.createLinearGradient(doorX + doorW - 60, doorY, doorX + doorW, doorY + doorH);
+                    hallGrad.addColorStop(0, `rgba(254, 249, 195, ${0.42 * flashAlpha})`);
+                    hallGrad.addColorStop(1, `rgba(161, 161, 170, ${0.15 * flashAlpha})`);
+                    ctx.fillStyle = hallGrad;
+                } else {
+                    ctx.fillStyle = '#010102';
+                }
                 ctx.fillRect(doorX, doorY, doorW, doorH);
 
                 // Hoja de la puerta (ligeramente desplazada si está entreabierta)
-                const ajarOffset = state.doorAjar ? 38 : 0;
+                const ajarOffset = state.doorAjar ? 42 : 0;
                 ctx.fillStyle = state.lightOn ? '#2b1e16' : '#080605';
                 ctx.fillRect(doorX, doorY, doorW - ajarOffset, doorH);
 
@@ -2049,13 +2525,19 @@
                 ctx.lineWidth = 12;
                 ctx.strokeRect(doorX, doorY, doorW, doorH);
 
-                // Si entreabres la puerta y la entidad está afuera golpeando, se ven unos ojos en la rendija
-                if (state.doorAjar && (state.doorIntruderState === 'knocking' || state.doorIntruderState === 'entering')) {
-                    ctx.fillStyle = '#fef08a';
+                // Haz de luz de la linterna proyectado sobre el borde de la puerta al alumbrar
+                if (state.doorAjar && state.flashlightTimer > 0) {
+                    ctx.save();
+                    const beamAlpha = Math.min(0.45, state.flashlightTimer * 0.45);
+                    ctx.fillStyle = `rgba(254, 240, 138, ${beamAlpha})`;
                     ctx.beginPath();
-                    ctx.arc(doorX + doorW - 18, doorY + doorH * 0.36, 3.5, 0, Math.PI * 2);
-                    ctx.arc(doorX + doorW - 10, doorY + doorH * 0.36, 3.5, 0, Math.PI * 2);
+                    ctx.moveTo(w * 0.5, h);
+                    ctx.lineTo(doorX + doorW - ajarOffset - 10, doorY + doorH * 0.15);
+                    ctx.lineTo(doorX + doorW, doorY + doorH * 0.15);
+                    ctx.lineTo(doorX + doorW, doorY + doorH * 0.88);
+                    ctx.closePath();
                     ctx.fill();
+                    ctx.restore();
                 }
 
                 // Cerrojo / Llave visual
@@ -2075,40 +2557,58 @@
             const wallGrad = ctx.createRadialGradient(w * 0.5, h * 0.25, 40, w * 0.5, h * 0.5, Math.max(w, h) * 0.85);
             if (state.lightOn) {
                 wallGrad.addColorStop(0, '#3b3127');
-                wallGrad.addColorStop(0.55, '#211b16');
-                wallGrad.addColorStop(1, '#0d0b09');
+                wallGrad.addColorStop(0.6, '#231c16');
+                wallGrad.addColorStop(1, '#120e0b');
             } else {
-                wallGrad.addColorStop(0, '#060709');
+                wallGrad.addColorStop(0, '#09090d');
+                wallGrad.addColorStop(0.6, '#040406');
                 wallGrad.addColorStop(1, '#010102');
             }
             ctx.fillStyle = wallGrad;
             ctx.fillRect(0, 0, w, h);
 
-            // Lámpara del techo
-            ctx.strokeStyle = '#111';
-            ctx.lineWidth = 3;
-            ctx.beginPath();
-            ctx.moveTo(w * 0.5, 0);
-            ctx.lineTo(w * 0.5, h * 0.09);
-            ctx.stroke();
+            // Piso de madera en la parte inferior de la habitación
+            const floorStartY = h * 0.72;
+            ctx.fillStyle = state.lightOn ? '#1b140f' : '#030304';
+            ctx.fillRect(0, floorStartY, w, h - floorStartY);
 
-            ctx.fillStyle = state.lightOn ? '#fde68a' : '#27272a';
+            // Cono cálido de luz de techo cuando está encendida
+            if (state.lightOn) {
+                const lightCone = ctx.createRadialGradient(w * 0.5, 0, 10, w * 0.5, h * 0.35, h * 0.75);
+                lightCone.addColorStop(0, 'rgba(253, 224, 71, 0.16)');
+                lightCone.addColorStop(1, 'rgba(253, 224, 71, 0)');
+                ctx.fillStyle = lightCone;
+                ctx.fillRect(0, 0, w, h);
+            }
+
+            // Ventana con cortinas cerradas a la izquierda
+            const winW = Math.min(w * 0.23, 240);
+            const winH = h * 0.38;
+            const winX = w * 0.08;
+            const winY = h * 0.22;
+            drawWindowAndForest(winX, winY, winW, winH, state.curtainOpenAmount);
+
+            // Mesa de noche y cajón debajo de la ventana (izquierda)
+            const tableX = winX + 10;
+            const tableY = winY + winH + 22;
+            const tableW = winW - 20;
+            const tableH = h * 0.24;
+            ctx.fillStyle = state.lightOn ? '#261b14' : '#060505';
+            ctx.fillRect(tableX, tableY, tableW, tableH);
+            ctx.strokeStyle = state.lightOn ? '#3b2b20' : '#0f0c0a';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(tableX + 8, tableY + 10, tableW - 16, tableH * 0.38);
+            // Tirador del cajón
+            ctx.fillStyle = state.lightOn ? '#d97706' : '#3f3f46';
             ctx.beginPath();
-            ctx.arc(w * 0.5, h * 0.1, 14, 0, Math.PI * 2);
+            ctx.arc(tableX + tableW * 0.5, tableY + 10 + tableH * 0.19, 4, 0, Math.PI * 2);
             ctx.fill();
 
-            // Ventana en la pared izquierda (CON CORTINAS CERRADAS desde la cama)
-            const winW = Math.min(w * 0.28, 300);
-            const winH = h * 0.37;
-            const winX = w * 0.07;
-            const winY = h * 0.19;
-            drawWindowAndForest(winX, winY, winW, winH, 0);
-
-            // Puerta principal enfrente de la cama (Centro)
+            // Puerta principal enfrente de la cama (Centro) con vibración si golpean con furia
             const doorW = Math.min(w * 0.17, 180);
             const doorH = h * 0.54;
-            const doorX = w * 0.5 - doorW / 2;
-            const doorY = h * 0.19;
+            const doorX = w * 0.5 - doorW / 2 + state.doorShakeX * 0.6;
+            const doorY = h * 0.19 + state.doorShakeY * 0.6;
             ctx.fillStyle = '#010102';
             ctx.fillRect(doorX, doorY, doorW, doorH);
 
@@ -2138,18 +2638,47 @@
             ctx.fillRect(tvX - 8, tvY - 8, tvW + 16, tvH + 16);
 
             if (state.tvOn) {
-                const tvGlow = ctx.createRadialGradient(tvX + tvW / 2, tvY + tvH / 2, 10, tvX + tvW / 2, tvY + tvH / 2, tvW * 1.4);
-                tvGlow.addColorStop(0, 'rgba(165, 243, 252, 0.28)');
-                tvGlow.addColorStop(1, 'rgba(165, 243, 252, 0)');
-                ctx.fillStyle = tvGlow;
-                ctx.fillRect(tvX - tvW, tvY - tvH, tvW * 3, tvH * 3);
+                if (state.tvSignalGood) {
+                    // Estática limpia (nieve blanca + resplandor cian)
+                    const tvGlow = ctx.createRadialGradient(tvX + tvW / 2, tvY + tvH / 2, 10, tvX + tvW / 2, tvY + tvH / 2, tvW * 1.4);
+                    tvGlow.addColorStop(0, 'rgba(165, 243, 252, 0.28)');
+                    tvGlow.addColorStop(1, 'rgba(165, 243, 252, 0)');
+                    ctx.fillStyle = tvGlow;
+                    ctx.fillRect(tvX - tvW, tvY - tvH, tvW * 3, tvH * 3);
 
-                const blockSize = 6;
-                for (let sy = 0; sy < tvH; sy += blockSize) {
-                    for (let sx = 0; sx < tvW; sx += blockSize) {
-                        const shade = Math.floor(Math.random() * 255);
-                        ctx.fillStyle = `rgb(${shade},${shade},${shade})`;
-                        ctx.fillRect(tvX + sx, tvY + sy, blockSize, blockSize);
+                    const blockSize = 6;
+                    for (let sy = 0; sy < tvH; sy += blockSize) {
+                        for (let sx = 0; sx < tvW; sx += blockSize) {
+                            const shade = Math.floor(Math.random() * 255);
+                            ctx.fillStyle = `rgb(${shade},${shade},${shade})`;
+                            ctx.fillRect(tvX + sx, tvY + sy, blockSize, blockSize);
+                        }
+                    }
+                } else {
+                    // Mala señal: pantalla oscura con barras de interferencia móvil y líneas distorsionadas
+                    const badGlow = ctx.createRadialGradient(tvX + tvW / 2, tvY + tvH / 2, 8, tvX + tvW / 2, tvY + tvH / 2, tvW * 1.1);
+                    badGlow.addColorStop(0, 'rgba(245, 158, 11, 0.14)');
+                    badGlow.addColorStop(1, 'rgba(245, 158, 11, 0)');
+                    ctx.fillStyle = badGlow;
+                    ctx.fillRect(tvX - tvW, tvY - tvH, tvW * 3, tvH * 3);
+
+                    ctx.fillStyle = '#09090d';
+                    ctx.fillRect(tvX, tvY, tvW, tvH);
+
+                    const rollOffset = (performance.now() * 0.08) % tvH;
+                    for (let bar = 0; bar < 4; bar++) {
+                        const barY = tvY + ((rollOffset + bar * (tvH / 4)) % tvH);
+                        const barH = Math.min(12, tvY + tvH - barY);
+                        ctx.fillStyle = bar % 2 === 0 ? 'rgba(120, 113, 108, 0.35)' : 'rgba(24, 24, 27, 0.85)';
+                        ctx.fillRect(tvX, barY, tvW, barH);
+                    }
+
+                    // Líneas horizontales de interferencia errática
+                    ctx.fillStyle = 'rgba(212, 212, 216, 0.45)';
+                    for (let i = 0; i < 4; i++) {
+                        const lineY = tvY + Math.random() * tvH;
+                        const jitterX = (Math.random() - 0.5) * 10;
+                        ctx.fillRect(tvX + Math.max(0, jitterX), lineY, tvW - Math.abs(jitterX), 2);
                     }
                 }
             } else {
